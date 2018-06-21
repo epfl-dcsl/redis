@@ -1064,13 +1064,6 @@ void sigsegvHandler(int sig, siginfo_t *info, void *secret) {
     /* Test memory */
     serverLogRaw(LL_WARNING|LL_RAW, "\n------ FAST MEMORY TEST ------\n");
     bioKillThreads();
-    if (memtest_test_linux_anonymous_maps()) {
-        serverLogRaw(LL_WARNING|LL_RAW,
-            "!!! MEMORY ERROR DETECTED! Check your memory ASAP !!!\n");
-    } else {
-        serverLogRaw(LL_WARNING|LL_RAW,
-            "Fast memory test PASSED, however your memory can still be broken. Please run a memory test for several hours if possible.\n");
-    }
 #endif
 
     if (eip != NULL) {
