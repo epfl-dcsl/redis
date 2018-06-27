@@ -33,6 +33,8 @@
 #include <math.h>
 #include <ctype.h>
 
+#include <rpclib/api.h>
+
 static void setProtocolError(const char *errstr, client *c, long pos);
 
 /* Return the size consumed from the allocator, for the specified SDS string,
@@ -899,6 +901,18 @@ int writeToClient(int fd, client *c, int handler_installed) {
     ssize_t nwritten = 0, totwritten = 0;
     size_t objlen;
     sds o;
+
+    if (fd == RPCLIB_PHONY_FD) {
+        if (!clientHasPendingReplies(c))
+            return C_OK;
+        serverAssert((c->bufpos > 0));
+        struct iovec response;
+        response.iov_len = c->bufpos;
+        response.iov_base = c->buf;
+        rpc_send_response(c->handle, &response, 1);
+        c->bufpos = 0;
+        return C_OK;
+    }
 
     while(clientHasPendingReplies(c)) {
         if (c->bufpos > 0) {

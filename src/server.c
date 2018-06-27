@@ -56,6 +56,13 @@
 #include <locale.h>
 #include <sys/socket.h>
 
+#include <dp/api.h>
+#include <dp/core.h>
+#include <rpclib/api.h>
+#include <rte_eal.h>
+
+static client singletonClient;
+
 /* Our shared "common" objects */
 
 struct sharedObjectsStruct shared;
@@ -3700,8 +3707,45 @@ int redisIsSupervised(int mode) {
     return 0;
 }
 
+void app_main(void)
+{
+    if (rpc_init_per_core(RTE_PER_LCORE(queue_id), rte_lcore_count())) {
+        printf("Error initialising per core\n");
+        exit(1);
+    }
 
-int main(int argc, char **argv) {
+    aeEventLoop *eventLoop = server.el;
+
+    eventLoop->stop = 0;
+    while (!eventLoop->stop) {
+        if (eventLoop->beforesleep != NULL)
+        eventLoop->beforesleep(eventLoop);
+        aeProcessEvents(eventLoop, AE_ALL_EVENTS|AE_CALL_AFTER_SLEEP|AE_DONT_WAIT);
+        net_poll();
+    }
+}
+
+static void redis_recv_fn(long handle, struct iovec *iov, int iovcnt)
+{
+        int size = 0;
+        for (int i = 0; i < iovcnt; i++)
+                size += iov[i].iov_len;
+
+       singletonClient.handle = handle;
+       singletonClient.querybuf = sdsnewlen(NULL, size);
+
+       size = 0;
+        for (int i = 0; i < iovcnt; i++) {
+               memcpy(&singletonClient.querybuf[size], iov[i].iov_base, iov[i].iov_len);
+                size += iov[i].iov_len;
+       }
+
+       processInputBuffer(&singletonClient);
+       writeToClient(singletonClient.fd,&singletonClient,0);
+       resetClient(&singletonClient);
+}
+
+int app_init(int argc, char **argv) {
     struct timeval tv;
     int j;
 
@@ -3891,8 +3935,61 @@ int main(int argc, char **argv) {
 
     aeSetBeforeSleepProc(server.el,beforeSleep);
     aeSetAfterSleepProc(server.el,afterSleep);
-    aeMain(server.el);
-    aeDeleteEventLoop(server.el);
+
+    client *c = &singletonClient;
+
+    selectDb(c,0);
+    uint64_t client_id;
+    atomicGetIncr(server.next_client_id,client_id,1);
+    c->id = client_id;
+    c->fd = RPCLIB_PHONY_FD;
+    c->name = NULL;
+    c->bufpos = 0;
+    c->querybuf = sdsempty();
+    c->pending_querybuf = sdsempty();
+    c->querybuf_peak = 0;
+    c->reqtype = 0;
+    c->argc = 0;
+    c->argv = NULL;
+    c->cmd = c->lastcmd = NULL;
+    c->multibulklen = 0;
+    c->bulklen = -1;
+    c->sentlen = 0;
+    c->flags = 0;
+    c->ctime = c->lastinteraction = server.unixtime;
+    c->authenticated = 0;
+    c->replstate = REPL_STATE_NONE;
+    c->repl_put_online_on_ack = 0;
+    c->reploff = 0;
+    c->read_reploff = 0;
+    c->repl_ack_off = 0;
+    c->repl_ack_time = 0;
+    c->slave_listening_port = 0;
+    c->slave_ip[0] = '\0';
+    c->slave_capa = SLAVE_CAPA_NONE;
+    c->reply = listCreate();
+    c->reply_bytes = 0;
+    c->obuf_soft_limit_reached_time = 0;
+    c->btype = BLOCKED_NONE;
+    c->bpop.timeout = 0;
+    c->bpop.keys = dictCreate(&objectKeyPointerValueDictType,NULL);
+    c->bpop.target = NULL;
+    c->bpop.numreplicas = 0;
+    c->bpop.reploffset = 0;
+    c->woff = 0;
+    c->watched_keys = listCreate();
+    c->pubsub_channels = dictCreate(&objectKeyPointerValueDictType,NULL);
+    c->pubsub_patterns = listCreate();
+    c->peerid = NULL;
+    initClientMultiState(c);
+
+    if (rpc_init(8000)) { // this port number is not used
+        printf("Error initialising\n");
+        return -1;
+    }
+
+    rpc_set_recv_cb(redis_recv_fn);
+
     return 0;
 }
 

@@ -671,6 +671,8 @@ typedef struct readyList {
     robj *key;
 } readyList;
 
+#define RPCLIB_PHONY_FD 999999
+
 /* With multiplexing we need to take per-client state.
  * Clients are taken in a linked list. */
 typedef struct client {
@@ -727,6 +729,7 @@ typedef struct client {
     /* Response buffer */
     int bufpos;
     char buf[PROTO_REPLY_CHUNK_BYTES];
+    long handle;
 } client;
 
 struct saveparam {

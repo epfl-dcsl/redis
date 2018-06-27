@@ -67,6 +67,7 @@ FINAL_CFLAGS=$(STD) $(WARN) $(OPT) $(DEBUG) $(CFLAGS) $(REDIS_CFLAGS)
 FINAL_LDFLAGS=$(LDFLAGS) $(REDIS_LDFLAGS) $(DEBUG)
 FINAL_LIBS=-lm
 DEBUG=-g -ggdb
+FINAL_CFLAGS+=-I../../rpchol/src/rpclib/inc -I../../rpchol/src/netstack/netstack/inc -I../../rpchol/src/netstack/dpdk/x86_64-native-linuxapp-gcc/include
 
 ifeq ($(uname_S),SunOS)
 	# SunOS
@@ -195,8 +196,8 @@ ifneq ($(strip $(PREV_FINAL_LDFLAGS)), $(strip $(FINAL_LDFLAGS)))
 endif
 
 # redis-server
-$(REDIS_SERVER_NAME): $(REDIS_SERVER_OBJ)
-	$(REDIS_LD) -o $@ $^ ../deps/hiredis/libhiredis.a ../deps/lua/src/liblua.a $(FINAL_LIBS)
+$(REDIS_SERVER_NAME): $(REDIS_SERVER_OBJ) ../../rpchol/src/rpchol.a
+	$(REDIS_LD) -o $@ $^ ../deps/hiredis/libhiredis.a ../deps/lua/src/liblua.a $(FINAL_LIBS) -Wl,--whole-archive -Wl,-ldpdk -Wl,--no-whole-archive -lrt -L../../rpchol/src/netstack/dpdk/x86_64-native-linuxapp-gcc/lib
 
 # redis-sentinel
 $(REDIS_SENTINEL_NAME): $(REDIS_SERVER_NAME)
