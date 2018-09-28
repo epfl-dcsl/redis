@@ -33,7 +33,7 @@
 #include <math.h>
 #include <ctype.h>
 
-#include <rpclib/api.h>
+#include <r2p2/api.h>
 
 static void setProtocolError(const char *errstr, client *c, long pos);
 
@@ -909,7 +909,7 @@ int writeToClient(int fd, client *c, int handler_installed) {
         struct iovec response;
         response.iov_len = c->bufpos;
         response.iov_base = c->buf;
-        rpc_send_response(c->handle, &response, 1);
+        r2p2_send_response(c->handle, &response, 1);
         c->bufpos = 0;
         return C_OK;
     }

@@ -58,7 +58,7 @@
 
 #include <dp/api.h>
 #include <dp/core.h>
-#include <rpclib/api.h>
+#include <r2p2/api.h>
 #include <rte_eal.h>
 
 static client singletonClient;
@@ -3709,7 +3709,7 @@ int redisIsSupervised(int mode) {
 
 void app_main(void)
 {
-    if (rpc_init_per_core(RTE_PER_LCORE(queue_id), rte_lcore_count())) {
+    if (r2p2_init_per_core(RTE_PER_LCORE(queue_id), rte_lcore_count())) {
         printf("Error initialising per core\n");
         exit(1);
     }
@@ -3983,12 +3983,12 @@ int app_init(int argc, char **argv) {
     c->peerid = NULL;
     initClientMultiState(c);
 
-    if (rpc_init(8000)) { // this port number is not used
+    if (r2p2_init(8000)) { // this port number is not used
         printf("Error initialising\n");
         return -1;
     }
 
-    rpc_set_recv_cb(redis_recv_fn);
+    r2p2_set_recv_cb(redis_recv_fn);
 
     return 0;
 }

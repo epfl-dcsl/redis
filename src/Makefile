@@ -67,7 +67,7 @@ FINAL_CFLAGS=$(STD) $(WARN) $(OPT) $(DEBUG) $(CFLAGS) $(REDIS_CFLAGS)
 FINAL_LDFLAGS=$(LDFLAGS) $(REDIS_LDFLAGS) $(DEBUG)
 FINAL_LIBS=-lm
 DEBUG=-g -ggdb
-FINAL_CFLAGS+=-I../../rpchol/src/rpclib/inc -I../../rpchol/src/netstack/netstack/inc -I../../rpchol/src/netstack/dpdk/x86_64-native-linuxapp-gcc/include
+FINAL_CFLAGS+=-I../../rpchol/src/r2p2/inc -I../../rpchol/src/netstack/netstack/inc -I../../rpchol/src/netstack/dpdk/x86_64-native-linuxapp-gcc/include
 
 ifeq ($(uname_S),SunOS)
 	# SunOS
@@ -196,7 +196,7 @@ ifneq ($(strip $(PREV_FINAL_LDFLAGS)), $(strip $(FINAL_LDFLAGS)))
 endif
 
 # redis-server
-$(REDIS_SERVER_NAME): $(REDIS_SERVER_OBJ) ../../rpchol/src/rpchol.a
+$(REDIS_SERVER_NAME): $(REDIS_SERVER_OBJ) ../../rpchol/src/netstack/netstack/net/arp.o ../../rpchol/src/netstack/netstack/net/eth.o ../../rpchol/src/netstack/netstack/dp/api.o ../../rpchol/src/netstack/netstack/net/icmp.o ../../rpchol/src/netstack/netstack/dp/core.o ../../rpchol/src/netstack/netstack/net/init.o ../../rpchol/src/netstack/netstack/dp/dp_main.o ../../rpchol/src/netstack/netstack/net/ip.o ../../rpchol/src/netstack/netstack/dp/dpdk.o ../../rpchol/src/netstack/netstack/net/udp.o ../../rpchol/src/netstack/netstack/dp/queue_trace.o ../../rpchol/src/r2p2/mempool.o ../../rpchol/src/netstack/netstack/dp/r2p2.o ../../rpchol/src/r2p2/r2p2-common.o ../../rpchol/src/netstack/netstack/dp/wnd_stats.o
 	$(REDIS_LD) -o $@ $^ ../deps/hiredis/libhiredis.a ../deps/lua/src/liblua.a $(FINAL_LIBS) -Wl,--whole-archive -Wl,-ldpdk -Wl,--no-whole-archive -lrt -L../../rpchol/src/netstack/dpdk/x86_64-native-linuxapp-gcc/lib
 
 # redis-sentinel
