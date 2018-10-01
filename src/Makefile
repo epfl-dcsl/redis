@@ -194,6 +194,9 @@ endif
 ifneq ($(strip $(PREV_FINAL_LDFLAGS)), $(strip $(FINAL_LDFLAGS)))
 .make-prerequisites: persist-settings
 endif
+../../rpchol/src/netstack/netstack/net/arp.o:
+	make -C ../../rpchol/src/netstack/netstack clean
+	make -C ../../rpchol/src/netstack/netstack r2p2-synthetic FDIR=1
 
 # redis-server
 $(REDIS_SERVER_NAME): $(REDIS_SERVER_OBJ) ../../rpchol/src/netstack/netstack/net/arp.o ../../rpchol/src/netstack/netstack/net/eth.o ../../rpchol/src/netstack/netstack/dp/api.o ../../rpchol/src/netstack/netstack/net/icmp.o ../../rpchol/src/netstack/netstack/dp/core.o ../../rpchol/src/netstack/netstack/net/init.o ../../rpchol/src/netstack/netstack/dp/dp_main.o ../../rpchol/src/netstack/netstack/net/ip.o ../../rpchol/src/netstack/netstack/dp/dpdk.o ../../rpchol/src/netstack/netstack/net/udp.o ../../rpchol/src/netstack/netstack/dp/queue_trace.o ../../rpchol/src/r2p2/mempool.o ../../rpchol/src/netstack/netstack/dp/r2p2.o ../../rpchol/src/r2p2/r2p2-common.o ../../rpchol/src/netstack/netstack/dp/wnd_stats.o
