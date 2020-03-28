@@ -63,11 +63,21 @@ endif
 # Override default settings if possible
 -include .make-settings
 
+R2P2_DIR=$(shell git rev-parse --show-toplevel)/../r2p2
+include $(R2P2_DIR)/netstack/dp/dir.mk
+include $(R2P2_DIR)/netstack/net/dir.mk
+include $(R2P2_DIR)/r2p2/dir.mk
+
+ifeq ($(WITH_RAFT), 1)
+	RAFT_DIR=$(shell git rev-parse --show-toplevel)/../raft
+    CFLAGS+=-DWITH_RAFT
+endif
+
 FINAL_CFLAGS=$(STD) $(WARN) $(OPT) $(DEBUG) $(CFLAGS) $(REDIS_CFLAGS)
 FINAL_LDFLAGS=$(LDFLAGS) $(REDIS_LDFLAGS) $(DEBUG)
 FINAL_LIBS=-lm
 DEBUG=-g -ggdb
-FINAL_CFLAGS+=-I../../rpchol/src/r2p2/inc -I../../rpchol/src/netstack/netstack/inc -I../../rpchol/src/netstack/dpdk/x86_64-native-linuxapp-gcc/include
+FINAL_CFLAGS+=-I$(R2P2_DIR)/r2p2/inc -I$(R2P2_DIR)/netstack/inc -I$(R2P2_DIR)/dpdk/x86_64-native-linuxapp-gcc/include -I/$(RAFT_DIR)/include
 
 ifeq ($(uname_S),SunOS)
 	# SunOS
@@ -194,13 +204,16 @@ endif
 ifneq ($(strip $(PREV_FINAL_LDFLAGS)), $(strip $(FINAL_LDFLAGS)))
 .make-prerequisites: persist-settings
 endif
-../../rpchol/src/netstack/netstack/net/arp.o:
-	make -C ../../rpchol/src/netstack/netstack clean
-	make -C ../../rpchol/src/netstack/netstack r2p2-synthetic FDIR=1
+
+SRC_R2P2 := $(addprefix $(R2P2_DIR)/netstack/dp/, $(DP_SRC)) $(addprefix $(R2P2_DIR)/netstack/net/, $(NET_SRC)) $(addprefix $(R2P2_DIR)/r2p2/, $(R2P2_SRC_C))
+OBJS_R2P2 := $(patsubst %.c, %.o, $(SRC_R2P2))
+ifeq ($(WITH_RAFT), 1)
+	OBJS_R2P2 += $(RAFT_DIR)/libraft.a
+endif
 
 # redis-server
-$(REDIS_SERVER_NAME): $(REDIS_SERVER_OBJ) ../../rpchol/src/netstack/netstack/net/arp.o ../../rpchol/src/netstack/netstack/net/eth.o ../../rpchol/src/netstack/netstack/dp/api.o ../../rpchol/src/netstack/netstack/net/icmp.o ../../rpchol/src/netstack/netstack/dp/core.o ../../rpchol/src/netstack/netstack/net/init.o ../../rpchol/src/netstack/netstack/dp/dp_main.o ../../rpchol/src/netstack/netstack/net/ip.o ../../rpchol/src/netstack/netstack/dp/dpdk.o ../../rpchol/src/netstack/netstack/net/udp.o ../../rpchol/src/netstack/netstack/dp/queue_trace.o ../../rpchol/src/r2p2/mempool.o ../../rpchol/src/netstack/netstack/dp/r2p2.o ../../rpchol/src/r2p2/r2p2-common.o ../../rpchol/src/netstack/netstack/dp/wnd_stats.o
-	$(REDIS_LD) -o $@ $^ ../deps/hiredis/libhiredis.a ../deps/lua/src/liblua.a $(FINAL_LIBS) -Wl,--whole-archive -Wl,-ldpdk -Wl,--no-whole-archive -lrt -L../../rpchol/src/netstack/dpdk/x86_64-native-linuxapp-gcc/lib
+$(REDIS_SERVER_NAME): $(REDIS_SERVER_OBJ)
+	$(REDIS_LD) -o $@ $(REDIS_SERVER_OBJ) $(OBJS_R2P2) ../deps/hiredis/libhiredis.a ../deps/lua/src/liblua.a $(FINAL_LIBS) -Wl,--whole-archive -Wl,-ldpdk -Wl,--no-whole-archive -lrt -L$(R2P2_DIR)/dpdk/x86_64-native-linuxapp-gcc/lib -lpcap -lnuma -lconfig -lgcov --coverage
 
 # redis-sentinel
 $(REDIS_SENTINEL_NAME): $(REDIS_SERVER_NAME)

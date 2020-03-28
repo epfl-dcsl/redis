@@ -3718,10 +3718,12 @@ void app_main(void)
 
     eventLoop->stop = 0;
     while (!eventLoop->stop) {
+#ifndef WITH_RAFT
         if (eventLoop->beforesleep != NULL)
-        eventLoop->beforesleep(eventLoop);
+			eventLoop->beforesleep(eventLoop);
         aeProcessEvents(eventLoop, AE_ALL_EVENTS|AE_CALL_AFTER_SLEEP|AE_DONT_WAIT);
-        net_poll();
+#endif
+        r2p2_poll();
     }
 }
 
